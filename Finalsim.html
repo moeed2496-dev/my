@@ -1,0 +1,1615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Custom Market Simulator</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        /* --- 1. CSS Variables & Base --- */
+        :root {
+            --font-main: 'Poppins', sans-serif;
+            
+            /* Light Mode */
+            --color-bg: #f4f7f6;
+            --color-bg-alt: #e9ecef;
+            --color-card: #ffffff;
+            --color-text: #212529;
+            --color-text-muted: #6c757d;
+            --color-border: #dee2e6;
+            --shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            
+            /* Theme Colors */
+            --color-primary: #007bff; /* Blue */
+            --color-secondary: #6f42c1; /* Purple */
+            --color-accent: #fd7e14; /* Orange */
+            --color-positive: #28a745; /* Green */
+            --color-negative: #dc3545; /* Red */
+        }
+        
+        body.dark-mode {
+            /* Dark Mode */
+            --color-bg: #121212;
+            --color-bg-alt: #1a1a1a;
+            --color-card: #242424;
+            --color-text: #e0e0e0;
+            --color-text-muted: #adb5bd;
+            --color-border: #343a40;
+            --shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        /* --- 1.5. NEW LOGIN CSS --- */
+        body.show-login {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        
+        #login-container {
+            background-color: var(--color-card);
+            padding: 2.5rem;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            max-width: 400px;
+            width: 90%;
+            border: 1px solid var(--color-border);
+        }
+        
+        #login-container h2 {
+            text-align: center;
+            color: var(--color-primary);
+            margin-bottom: 2rem;
+            border: none;
+            padding: 0;
+        }
+        /* --- END NEW LOGIN CSS --- */
+
+        /* --- 2. Base & Layout --- */
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-main);
+            background-color: var(--color-bg);
+            color: var(--color-text);
+            line-height: 1.6;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        .app-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 1.5rem;
+        }
+        
+        /* ... (All your other existing CSS styles remain unchanged) ... */
+
+        header {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid var(--color-border);
+            gap: 1rem;
+        }
+        
+        .header-main {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header-main h1 {
+            color: var(--color-primary);
+            font-size: 1.75rem;
+        }
+        
+        .header-main .day-counter {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--color-accent);
+        }
+
+        .header-controls {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        nav {
+            display: flex;
+            gap: 0.5rem;
+            background-color: var(--color-bg-alt);
+            padding: 0.5rem;
+            border-radius: 8px;
+        }
+
+        /* --- 3. Components --- */
+        
+        /* Navigation */
+        .nav-btn {
+            background: none;
+            border: none;
+            padding: 0.5rem 1rem;
+            font-family: var(--font-main);
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: var(--color-text-muted);
+            cursor: pointer;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .nav-btn:hover {
+            background-color: var(--color-card);
+            color: var(--color-text);
+        }
+
+        .nav-btn.active {
+            background-color: var(--color-primary);
+            color: #fff;
+            box-shadow: 0 2px 4px rgba(0, 123, 255, 0.3);
+        }
+
+        /* Page Content */
+        .page {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+        .page.active {
+            display: block;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* Cards */
+        .card {
+            background-color: var(--color-card);
+            border-radius: 12px;
+            border: 1px solid var(--color-border);
+            box-shadow: var(--shadow);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .card h2 {
+            margin-bottom: 1.5rem;
+            color: var(--color-secondary);
+            border-bottom: 1px solid var(--color-border);
+            padding-bottom: 0.75rem;
+        }
+        
+        /* Grid Layout */
+        .grid-layout {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+        
+        .portfolio-summary .summary-item {
+            display: flex;
+            justify-content: space-between;
+            font-size: 1.1rem;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid var(--color-border);
+        }
+        .portfolio-summary .summary-item:last-child {
+            border-bottom: none;
+        }
+        .portfolio-summary .summary-item strong {
+            font-weight: 600;
+            color: var(--color-text);
+        }
+        .portfolio-summary .summary-item span {
+            color: var(--color-primary);
+            font-weight: 700;
+        }
+
+        /* Tables */
+        .table-wrapper {
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+        th, td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--color-border);
+            vertical-align: middle;
+        }
+        thead th {
+            background-color: var(--color-bg-alt);
+            color: var(--color-text-muted);
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+        }
+        tbody tr:hover {
+            background-color: var(--color-bg-alt);
+        }
+        .ticker-name {
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+        .ticker-symbol {
+            font-size: 0.9rem;
+            color: var(--color-text-muted);
+        }
+        .price, .positive, .negative {
+            font-weight: 600;
+        }
+        .positive { color: var(--color-positive); }
+        .negative { color: var(--color-negative); }
+        .no-data-msg {
+            text-align: center;
+            padding: 2rem;
+            color: var(--color-text-muted);
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 0.6rem 1.2rem;
+            font-size: 0.9rem;
+            font-weight: 600;
+            font-family: var(--font-main);
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+        /* *** NEW ***: Small button variant */
+        .btn-sm {
+            padding: 0.4rem 0.8rem;
+            font-size: 0.8rem;
+        }
+        .btn-buy {
+            background-color: var(--color-positive);
+            color: #fff;
+        }
+        .btn-buy:hover {
+            background-color: #218838;
+            transform: translateY(-2px);
+        }
+        .btn-sell {
+            background-color: var(--color-negative);
+            color: #fff;
+        }
+        .btn-sell:hover {
+            background-color: #c82333;
+            transform: translateY(-2px);
+        }
+        .btn-primary {
+            background-color: var(--color-primary);
+            color: #fff;
+        }
+        .btn-primary:hover {
+            background-color: #0069d9;
+        }
+        .btn-secondary {
+            background-color: var(--color-bg-alt);
+            color: var(--color-text);
+            border: 1px solid var(--color-border);
+        }
+        .btn-secondary:hover {
+            background-color: var(--color-border);
+        }
+        .btn-danger {
+            background-color: var(--color-negative);
+            color: #fff;
+        }
+        .btn-danger-outline {
+            background-color: transparent;
+            color: var(--color-negative);
+            border: 1px solid var(--color-negative);
+            padding: 0.25rem 0.5rem;
+            font-size: 0.8rem;
+        }
+        .btn-danger-outline:hover {
+            background-color: var(--color-negative);
+            color: #fff;
+        }
+        .trade-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        /* Forms */
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+        .form-control, .form-select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--color-border);
+            background-color: var(--color-bg);
+            color: var(--color-text);
+            border-radius: 6px;
+            font-size: 1rem;
+            font-family: var(--font-main);
+        }
+        .form-inline {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            align-items: flex-end;
+        }
+        .form-inline .form-group {
+            flex: 1;
+            margin-bottom: 0;
+            min-width: 120px;
+        }
+        /* *** NEW ***: Input group for search button */
+        .input-group {
+            display: flex;
+            gap: 0.5rem;
+        }
+        .input-group .form-control {
+            flex-grow: 1;
+        }
+
+        /* User Switcher */
+        .user-switcher {
+            display: flex;
+            flex-direction: column;
+        }
+        .user-switcher label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--color-text-muted);
+            margin-bottom: 0.25rem;
+        }
+        #user-select {
+            padding: 0.5rem;
+            min-width: 180px;
+            background-color: var(--color-card);
+            border: 1px solid var(--color-border);
+            color: var(--color-text);
+            border-radius: 6px;
+            font-weight: 600;
+        }
+        
+        /* Day Processor */
+        .day-processor {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+        }
+        #process-day-btn {
+            background-color: var(--color-accent);
+            color: #fff;
+            box-shadow: 0 2px 6px rgba(253, 126, 20, 0.4);
+        }
+        #process-day-btn:hover {
+            background-color: #e66a00;
+            transform: translateY(-2px);
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.6);
+            animation: fadeIn 0.3s;
+        }
+        .modal-content {
+            background-color: var(--color-card);
+            margin: 10% auto;
+            padding: 2rem;
+            border: 1px solid var(--color-border);
+            width: 90%;
+            max-width: 450px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn {
+            from { transform: translateY(-50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--color-border);
+            padding-bottom: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .modal-header h2 {
+            margin: 0;
+            border: none;
+            padding: 0;
+            color: var(--color-text);
+        }
+        .close-btn {
+            color: var(--color-text-muted);
+            font-size: 1.75rem;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .trade-summary p {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+        }
+        .trade-summary strong {
+            font-size: 1.2rem;
+            color: var(--color-primary);
+        }
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+        }
+        
+        /* Leaderboard List */
+        .leaderboard-list {
+            list-style: none;
+            padding: 0;
+        }
+        .leaderboard-item {
+            display: flex;
+            align-items: center;
+            padding: 1rem;
+            background-color: var(--color-bg-alt);
+            border-radius: 8px;
+            margin-bottom: 0.75rem;
+        }
+        .leaderboard-item .rank {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--color-secondary);
+            width: 40px;
+        }
+        .leaderboard-item .name {
+            font-weight: 600;
+            flex-grow: 1;
+        }
+        .leaderboard-item .value {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: var(--color-primary);
+        }
+        
+        /* Toast Notifications */
+        #toast-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .toast {
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            color: #fff;
+            font-weight: 600;
+            animation: slideInRight 0.5s ease, fadeOut 0.5s ease 2.5s forwards;
+            opacity: 0;
+        }
+        .toast.success { background-color: var(--color-positive); }
+        .toast.error { background-color: var(--color-negative); }
+        .toast.info { background-color: var(--color-primary); }
+
+        @keyframes slideInRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+        
+        /* --- 4. Responsive --- */
+        @media (max-width: 992px) {
+             header {
+                 flex-direction: column;
+                 align-items: flex-start;
+             }
+             .header-controls {
+                 width: 100%;
+                 justify-content: space-between;
+             }
+             .day-processor {
+                 align-items: flex-start;
+                 margin-top: 1rem;
+             }
+        }
+        @media (max-width: 768px) {
+            nav {
+                width: 100%;
+                justify-content: space-around;
+            }
+            .nav-btn {
+                flex-grow: 1;
+                text-align: center;
+            }
+            .grid-layout {
+                grid-template-columns: 1fr;
+            }
+            .form-inline {
+                flex-direction: column;
+                gap: 1rem;
+                align-items: stretch;
+            }
+            .form-inline .btn {
+                width: 100%;
+            }
+            .header-controls {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 1rem;
+            }
+            #user-select {
+                width: 100%;
+            }
+        }
+
+    </style>
+</head>
+<body class="show-login">
+
+    <div id="login-container">
+        <h2>📈 Simulator Login</h2>
+        <div class="form-group">
+            <label for="username-input">Username</label>
+            <input type="text" id="username-input" class="form-control" placeholder="Username">
+        </div>
+        <div class="form-group">
+            <label for="password-input">Password</label>
+            <input type="password" id="password-input" class="form-control" placeholder="Password">
+        </div>
+        <button id="login-button" class="btn btn-primary" style="width: 100%;">Login</button>
+        <p id="login-error-msg" style="display:none; color: var(--color-negative); text-align: center; margin-top: 1rem;">Access Denied</p>
+    </div>
+
+    <div id="app-wrapper" style="display:none;">
+
+        <div class="app-container">
+            
+            <header>
+                <div class="header-main">
+                    <h1>📈 Custom Market Sim</h1>
+                    <span class="day-counter" id="day-counter-el">Day: 1</span>
+                </div>
+                
+                <div class="header-controls">
+                    <div class="user-switcher">
+                        <label for="user-select">Active Investor</label>
+                        <select id="user-select" class="form-select"></select>
+                    </div>
+
+                    <nav>
+                        <button class="nav-btn active" data-page="market">Market</button>
+                        <button class="nav-btn" data-page="portfolio">Portfolio</button>
+                        <button class="nav-btn" data-page="leaderboard">Leaderboard</button>
+                        <button class="nav-btn" data-page="admin">Admin</button>
+                    </nav>
+                    
+                    <div class="day-processor">
+                         <button id="process-day-btn" class="btn">Process Day <span id="day-btn-counter">1</span> ➔</button>
+                    </div>
+                </div>
+            </header>
+
+            <main>
+                
+                <section id="market-page" class="page active">
+                    <div class="card">
+                        <h2>Market Board</h2>
+                        <div class="table-wrapper">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Ticker</th>
+                                        <th>Price</th>
+                                        <th>% Change</th>
+                                        <th>Day Volume (B/S)</th>
+                                        <th>Total Shares</th>
+                                        <th>Trade</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="market-table-body">
+                                    </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+                
+                <section id="portfolio-page" class="page">
+                    <div class="card portfolio-summary">
+                        <h2 id="portfolio-title">Your Portfolio</h2>
+                        <div class="summary-item">
+                            <strong>Total Value:</strong>
+                            <span id="total-portfolio-value">$10,000.00</span>
+                        </div>
+                        <div class="summary-item">
+                            <strong>Cash Balance:</strong>
+                            <span id="cash-balance">$10,000.00</span>
+                        </div>
+                        <div class="summary-item">
+                            <strong>Holdings Value:</strong>
+                            <span id="holdings-value">$0.00</span>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h2>Holdings</h2>
+                        <div class="table-wrapper">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Symbol</th>
+                                        <th>Quantity</th>
+                                        <th>Avg. Buy Price</th>
+                                        <th>Current Price</th>
+                                        <th>Current Value</th>
+                                        <th>P/L</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="portfolio-table-body">
+                                    </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="leaderboard-page" class="page">
+                    <div class="card">
+                        <h2>Investor Leaderboard</h2>
+                        <ol class="leaderboard-list" id="leaderboard-list">
+                            </ol>
+                    </div>
+                </section>
+                
+                <section id="admin-page" class="page">
+                    <div class="grid-layout">
+                        <div class="card">
+                            <h2>Add New Ticker</h2>
+                            <form id="add-ticker-form">
+                                <div class="form-group">
+                                    <label for="ticker-name">Entity Name</label>
+                                    <input type="text" id="ticker-name" class="form-control" placeholder="e.g., Canteen" required>
+                                </div>
+                                <div class="form-inline">
+                                    <div class="form-group">
+                                        <label for="ticker-symbol">Symbol (4 letters)</label>
+                                        <input type="text" id="ticker-symbol" class="form-control" placeholder="CNTN" required maxlength="4" pattern="[A-Za-z]{4}">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="ticker-price">Start Price</label>
+                                        <input type="number" id="ticker-price" class="form-control" placeholder="100" min="1" step="0.01" required>
+                                    </div>
+                                </div>
+                                <div class="form-group" style="margin-top: 1.5rem;">
+                                    <label for="ticker-shares">Total Shares</label>
+                                    <input type="number" id="ticker-shares" class="form-control" placeholder="1000" min="100" step="1" required>
+                                </div>
+                                <button type="submit" class="btn btn-primary" style="width: 100%;">Add Ticker</button>
+                            </form>
+                        </div>
+
+                        <div class="card">
+                            <h2>Add New Investor</h2>
+                            <form id="add-investor-form">
+                                <div class="form-group">
+                                    <label for="investor-id">Investor ID (Unique)</label>
+                                    <input type="text" id="investor-id" class="form-control" placeholder="e.g., student1001" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="investor-name">Investor Name</label>
+                                    <input type="text" id="investor-name" class="form-control" placeholder="e.g., Alice" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="investor-cash">Starting Cash</label>
+                                    <input type="number" id="investor-cash" class="form-control" placeholder="10000" min="0" step="1" required>
+                                </div>
+                                <button type="submit" class="btn btn-primary" style="width: 100%;">Add Investor</button>
+                            </form>
+                        </div>
+                    </div>
+                    
+                    <div class="grid-layout">
+                        <div class="card">
+                            <h2>Manage Tickers</h2>
+                            <div class="table-wrapper">
+                                <table id="manage-tickers-table">
+                                    <thead>
+                                        <tr><th>Symbol</th><th>Price</th><th>Shares</th><th></th></tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <h2>Manage Investors</h2>
+                            
+                            <div class="form-group">
+                                <label for="search-investor-input">Search Investors (by ID or Name)</label>
+                                <div class="input-group">
+                                    <input type="text" id="search-investor-input" class="form-control" placeholder="Type ID or Name...">
+                                    <button type="button" id="search-investor-btn" class="btn btn-primary">Search</button>
+                                </div>
+                            </div>
+                            
+                            <div class="table-wrapper">
+                                <table id="manage-investors-table">
+                                    <thead>
+                                        <tr><th>ID</th><th>Name</th><th>Cash</th><th>Actions</th></tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <h2>Market Settings</h2>
+                        <div class="form-group">
+                            <label for="market-sensitivity">Price Sensitivity (Your <code>0.5</code> factor)</label>
+                            <input type="number" id="market-sensitivity" class="form-control" min="0.01" max="2" step="0.01" style="max-width: 200px;">
+                        </div>
+                        
+                        <h2 style="margin-top: 2rem;">Reset Game</h2>
+                        <p style="margin-bottom: 1rem; color: var(--color-text-muted);">This will delete all tickers, investors, and trade history.</p>
+                        <button id="reset-game-btn" class="btn btn-danger">Reset Entire Simulation</button>
+                    </div>
+                </section>
+
+            </main>
+        </div>
+
+        <div id="trade-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 id="modal-title">Trade</h2>
+                    <span class="close-btn">&times;</span>
+                </div>
+                <form id="trade-form">
+                    <div class="form-group">
+                        <label for="trade-quantity">Quantity</label>
+                        <input type="number" id="trade-quantity" min="1" class="form-control" placeholder="Enter number of shares" required>
+                    </div>
+                    <div class="trade-summary">
+                        <p>Current Price: <span id="modal-price">$0.00</span></p>
+                        <p>Cash Available: <span id="modal-cash-available">$0.00</span></p>
+                        <p>Shares Owned: <span id="modal-shares-owned">0</span></p>
+                        <hr style="border: 0; border-top: 1px solid var(--color-border); margin: 1rem 0;">
+                        <p>Total: <strong id="modal-total">$0.00</strong></p>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-secondary" id="modal-cancel-btn">Cancel</button>
+                        <button type="submit" class="btn" id="trade-confirm-btn">Confirm</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div id="toast-container"></div>
+
+    </div> <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // --- 0. NEW Login Gate Logic ---
+            const loginContainer = document.getElementById('login-container');
+            const appWrapper = document.getElementById('app-wrapper');
+            const loginButton = document.getElementById('login-button');
+            const usernameInput = document.getElementById('username-input');
+            const passwordInput = document.getElementById('password-input');
+            const loginErrorMsg = document.getElementById('login-error-msg');
+
+            function checkLogin() {
+                const username = usernameInput.value;
+                const password = passwordInput.value;
+
+                if (username === 'admin' && password === '@Stocksim_1234') {
+                    // Success
+                    loginContainer.style.display = 'none';
+                    appWrapper.style.display = 'block';
+                    loginErrorMsg.style.display = 'none';
+                    // Remove the centering class from the body
+                    document.body.classList.remove('show-login');
+                } else {
+                    // Failure
+                    loginErrorMsg.style.display = 'block';
+                }
+            }
+
+            loginButton.addEventListener('click', checkLogin);
+            
+            // Allow pressing Enter to log in
+            usernameInput.addEventListener('keyup', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault(); // Prevent potential form submission
+                    checkLogin();
+                }
+            });
+            passwordInput.addEventListener('keyup', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault(); // Prevent potential form submission
+                    checkLogin();
+                }
+            });
+            // --- End NEW Login Gate Logic ---
+
+
+            // --- 1. State Management ---
+            
+            let state = {};
+            const DEFAULT_SENSITIVITY = 0.5;
+
+            /**
+             * Initializes the default state if no saved data is found
+             */
+            function initializeDefaultState() {
+                state = {
+                    users: [
+                        { id: "admin", name: "Default Investor", cash: 10000, portfolio: {} }
+                    ],
+                    activeUserId: "admin",
+                    market: {
+                        tickers: [], // User must add these
+                        currentDay: 1,
+                        sensitivity: DEFAULT_SENSITIVITY 
+                    }
+                };
+                saveData();
+            }
+
+            /**
+             * Saves the current state to localStorage
+             */
+            function saveData() {
+                try {
+                    localStorage.setItem('customMarketState', JSON.stringify(state));
+                } catch (e) {
+                    console.error("Failed to save data to localStorage:", e);
+                    showToast("Error: Could not save data. Storage may be full.", "error");
+                }
+            }
+
+            /**
+             * Loads state from localStorage
+             */
+            function loadData() {
+                try {
+                    const savedState = localStorage.getItem('customMarketState');
+                    if (savedState) {
+                        state = JSON.parse(savedState);
+                        // Ensure defaults for new features
+                        if (!state.market) state.market = {};
+                        if (state.market.sensitivity === undefined) {
+                            state.market.sensitivity = DEFAULT_SENSITIVITY;
+                        }
+                        // Ensure activeUserId is valid
+                        if (!state.users.find(u => u.id === state.activeUserId)) {
+                            state.activeUserId = state.users[0]?.id || null;
+                        }
+                    } else {
+                        initializeDefaultState();
+                    }
+                } catch (e) {
+                    console.error("Failed to load data, resetting to default:", e);
+                    initializeDefaultState();
+                }
+            }
+
+            // --- 2. DOM References ---
+            const pages = document.querySelectorAll('.page');
+            const navButtons = document.querySelectorAll('.nav-btn');
+            
+            // Header
+            const userSelect = document.getElementById('user-select');
+            const dayCounterEl = document.getElementById('day-counter-el');
+            const dayBtnCounter = document.getElementById('day-btn-counter');
+            const processDayBtn = document.getElementById('process-day-btn');
+            
+            // Market Page
+            const marketTableBody = document.getElementById('market-table-body');
+            
+            // Portfolio Page
+            const portfolioTitle = document.getElementById('portfolio-title');
+            const portfolioTableBody = document.getElementById('portfolio-table-body');
+            const cashBalanceEl = document.getElementById('cash-balance');
+            const totalPortfolioValueEl = document.getElementById('total-portfolio-value');
+            const holdingsValueEl = document.getElementById('holdings-value');
+            
+            // Leaderboard Page
+            const leaderboardList = document.getElementById('leaderboard-list');
+            
+            // Admin Page
+            const addTickerForm = document.getElementById('add-ticker-form');
+            const addInvestorForm = document.getElementById('add-investor-form');
+            const manageTickersTable = document.getElementById('manage-tickers-table').querySelector('tbody');
+            const manageInvestorsTable = document.getElementById('manage-investors-table').querySelector('tbody');
+            const marketSensitivityInput = document.getElementById('market-sensitivity');
+            const resetGameBtn = document.getElementById('reset-game-btn');
+            const searchInvestorInput = document.getElementById('search-investor-input');
+            const searchInvestorBtn = document.getElementById('search-investor-btn');
+            
+            // Modal elements
+            const tradeModal = document.getElementById('trade-modal');
+            const modalTitle = document.getElementById('modal-title');
+            const modalPriceEl = document.getElementById('modal-price');
+            const modalTotalEl = document.getElementById('modal-total');
+            const modalCashEl = document.getElementById('modal-cash-available');
+            const modalSharesEl = document.getElementById('modal-shares-owned');
+            const tradeForm = document.getElementById('trade-form');
+            const tradeQuantityInput = document.getElementById('trade-quantity');
+            const confirmBtn = document.getElementById('trade-confirm-btn');
+            const cancelBtn = document.getElementById('modal-cancel-btn');
+            const closeBtn = tradeModal.querySelector('.close-btn');
+
+            // Toast Container
+            const toastContainer = document.getElementById('toast-container');
+
+            // --- 3. Helper Functions ---
+
+            /**
+             * Formats a number as currency
+             */
+            function formatCurrency(num) {
+                if (typeof num !== 'number') num = 0;
+                return `$${num.toFixed(2)}`;
+            }
+
+            /**
+             * Gets the currently active user object
+             */
+            function getActiveUser() {
+                return state.users.find(u => u.id === state.activeUserId);
+            }
+
+            /**
+             * Gets a ticker object by its symbol
+             */
+            function getTicker(symbol) {
+                return state.market.tickers.find(t => t.symbol === symbol);
+            }
+
+            /**
+             * Calculates the total portfolio value for a given user
+             */
+            function calculateUserTotalValue(user) {
+                let holdingsValue = 0;
+                for (const symbol in user.portfolio) {
+                    const holding = user.portfolio[symbol];
+                    const ticker = getTicker(symbol);
+                    if (ticker) {
+                        holdingsValue += holding.shares * ticker.price;
+                    }
+                }
+                return user.cash + holdingsValue;
+            }
+            
+            // --- 4. Render Functions ---
+
+            /**
+             * Main render function to update all UI parts
+             */
+            function renderAll() {
+                renderHeader();
+                renderMarketTable();
+                renderPortfolio();
+                renderLeaderboard();
+                renderAdmin();
+                saveData(); // Save state after every full render
+            }
+
+            /**
+             * Updates the header (user selector, day counter)
+             */
+            function renderHeader() {
+                // Update day counters
+                const day = state.market.currentDay;
+                dayCounterEl.textContent = `Day: ${day}`;
+                dayBtnCounter.textContent = `${day} ➔`;
+
+                // Populate user selector
+                userSelect.innerHTML = '';
+                state.users.forEach(user => {
+                    const option = document.createElement('option');
+                    option.value = user.id;
+                    option.textContent = `${user.name} (${user.id})`;
+                    if (user.id === state.activeUserId) {
+                        option.selected = true;
+                    }
+                    userSelect.appendChild(option);
+                });
+            }
+
+            /**
+             * Renders the main market table
+             */
+            function renderMarketTable() {
+                if (state.market.tickers.length === 0) {
+                    marketTableBody.innerHTML = `<tr><td colspan="6" class="no-data-msg">No tickers added yet. Visit the Admin page to create one.</td></tr>`;
+                    return;
+                }
+                
+                marketTableBody.innerHTML = ''; // Clear existing table
+                
+                state.market.tickers.forEach(ticker => {
+                    const { symbol, name, price, history, dayBuys, daySells, totalShares } = ticker;
+
+                    const prevPrice = history.length > 1 
+                        ? history[history.length - 2].price 
+                        : history[0].price;
+                    
+                    const change = (history.length > 1) ? ((price - prevPrice) / prevPrice) * 100 : 0;
+                    const changeClass = change > 0 ? 'positive' : (change < 0 ? 'negative' : '');
+                    const changeDisplay = change > 0 ? `+${change.toFixed(2)}` : change.toFixed(2);
+
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>
+                            <div class="ticker-name">${name}</div>
+                            <div class="ticker-symbol">${symbol}</div>
+                        </td>
+                        <td class="price">${formatCurrency(price)}</td>
+                        <td class="${changeClass}">${changeDisplay}%</td>
+                        <td>${dayBuys} / ${daySells}</td>
+                        <td>${totalShares}</td>
+                        <td>
+                            <div class="trade-buttons">
+                                <button class="btn btn-buy btn-sm" data-symbol="${symbol}">Buy</button>
+                                <button class="btn btn-sell btn-sm" data-symbol="${symbol}">Sell</button>
+                            </div>
+                        </td>
+                    `;
+                    marketTableBody.appendChild(row);
+                });
+            }
+
+            /**
+             * Renders the active user's portfolio
+             */
+            function renderPortfolio() {
+                const user = getActiveUser();
+                if (!user) {
+                    console.error("No active user found!");
+                    return;
+                }
+
+                portfolioTitle.textContent = `${user.name}'s Portfolio`;
+                cashBalanceEl.textContent = formatCurrency(user.cash);
+
+                let holdingsValue = 0;
+                portfolioTableBody.innerHTML = ''; // Clear table
+
+                if (Object.keys(user.portfolio).length === 0) {
+                    portfolioTableBody.innerHTML = `<tr><td colspan="6" class="no-data-msg">You have no holdings. Visit the Market to buy tickers.</td></tr>`;
+                } else {
+                    for (const symbol in user.portfolio) {
+                        const holding = user.portfolio[symbol];
+                        const ticker = getTicker(symbol);
+                        
+                        // Handle case where ticker might have been deleted
+                        if (!ticker) {
+                            console.warn(`User holds deleted ticker ${symbol}`);
+                            continue; 
+                        }
+
+                        const currentPrice = ticker.price;
+                        const currentValue = holding.shares * currentPrice;
+                        const pnl = (currentPrice - holding.avgBuyPrice) * holding.shares;
+                        const pnlClass = pnl > 0 ? 'positive' : (pnl < 0 ? 'negative' : '');
+                        
+                        holdingsValue += currentValue;
+
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${symbol}</td>
+                            <td>${holding.shares}</td>
+                            <td>${formatCurrency(holding.avgBuyPrice)}</td>
+                            <td>${formatCurrency(currentPrice)}</td>
+                            <td>${formatCurrency(currentValue)}</td>
+                            <td class="${pnlClass}">${formatCurrency(pnl)}</td>
+                        `;
+                        portfolioTableBody.appendChild(row);
+                    }
+                }
+
+                holdingsValueEl.textContent = formatCurrency(holdingsValue);
+                totalPortfolioValueEl.textContent = formatCurrency(user.cash + holdingsValue);
+            }
+
+            /**
+             * Renders the leaderboard
+             */
+            function renderLeaderboard() {
+                leaderboardList.innerHTML = '';
+
+                const userValues = state.users.map(user => ({
+                    user,
+                    totalValue: calculateUserTotalValue(user)
+                }));
+
+                userValues.sort((a, b) => b.totalValue - a.totalValue);
+
+                userValues.forEach((item, index) => {
+                    const li = document.createElement('li');
+                    li.className = 'leaderboard-item';
+                    li.innerHTML = `
+                        <span class="rank">${index + 1}</span>
+                        <span class="name">${item.user.name}</span>
+                        <span class="value">${formatCurrency(item.totalValue)}</span>
+                    `;
+                    leaderboardList.appendChild(li);
+                });
+            }
+
+            /**
+             * Renders all admin page components
+             */
+            function renderAdmin() {
+                // Render tickers table
+                manageTickersTable.innerHTML = '';
+                if (state.market.tickers.length === 0) {
+                    manageTickersTable.innerHTML = `<tr><td colspan="4" class="no-data-msg">No tickers added yet.</td></tr>`;
+                } else {
+                    state.market.tickers.forEach(t => {
+                        manageTickersTable.innerHTML += `
+                            <tr>
+                                <td>${t.symbol}</td>
+                                <td>${formatCurrency(t.price)}</td>
+                                <td>${t.totalShares}</td>
+                                <td>
+                                    <button class="btn-danger-outline btn" data-symbol="${t.symbol}">Delete</button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                }
+                
+                // Render (filtered) investors table
+                renderManageInvestorsTable();
+
+                // Set market sensitivity input
+                marketSensitivityInput.value = state.market.sensitivity;
+            }
+
+            /**
+             * Renders the "Manage Investors" table, with an optional filter
+             */
+            function renderManageInvestorsTable(filter = '') {
+                manageInvestorsTable.innerHTML = '';
+                const query = filter.toLowerCase();
+
+                const filteredUsers = state.users.filter(user => {
+                    return user.name.toLowerCase().includes(query) || 
+                           user.id.toLowerCase().includes(query);
+                });
+
+                if (filteredUsers.length === 0) {
+                    manageInvestorsTable.innerHTML = `<tr><td colspan="4" class="no-data-msg">No investors found${filter ? ' matching "' + filter + '"' : ''}.</td></tr>`;
+                } else {
+                    filteredUsers.forEach(u => {
+                        manageInvestorsTable.innerHTML += `
+                            <tr>
+                                <td>${u.id}</td>
+                                <td>${u.name}</td>
+                                <td>${formatCurrency(u.cash)}</td>
+                                <td>
+                                    <button class="btn-danger-outline btn" data-id="${u.id}">Delete</button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                }
+            }
+            
+            // --- 5. Core Logic Handlers ---
+
+            /**
+             * Handles page navigation
+             */
+            function handlePageNavigation(e) {
+                const targetPage = e.target.dataset.page;
+                if (!targetPage) return;
+
+                // Update pages
+                pages.forEach(page => {
+                    page.classList.toggle('active', page.id === `${targetPage}-page`);
+                });
+
+                // Update nav buttons
+                navButtons.forEach(btn => {
+                    btn.classList.toggle('active', btn.dataset.page === targetPage);
+                });
+            }
+
+            /**
+             * Handles switching the active user
+             */
+            function handleChangeUser(e) {
+                state.activeUserId = e.target.value;
+                renderPortfolio(); // Only portfolio needs updating
+                showToast(`Switched to ${getActiveUser().name}`, "info");
+            }
+
+            /**
+             * Handles submission of the "Add Ticker" form
+             */
+            function handleAddTicker(e) {
+                e.preventDefault();
+                const name = document.getElementById('ticker-name').value;
+                const symbol = document.getElementById('ticker-symbol').value.toUpperCase();
+                const price = parseFloat(document.getElementById('ticker-price').value);
+                const shares = parseInt(document.getElementById('ticker-shares').value);
+
+                if (getTicker(symbol)) {
+                    showToast(`Error: Ticker symbol ${symbol} already exists.`, "error");
+                    return;
+                }
+
+                const newTicker = {
+                    symbol,
+                    name,
+                    price,
+                    totalShares: shares,
+                    history: [{ day: state.market.currentDay, price: price }],
+                    dayBuys: 0,
+                    daySells: 0
+                };
+
+                state.market.tickers.push(newTicker);
+                showToast(`Ticker ${name} (${symbol}) added!`, "success");
+                e.target.reset();
+                renderAll();
+            }
+
+            /**
+             * Handles submission of the "Add Investor" form
+             */
+            function handleAddInvestor(e) {
+                e.preventDefault();
+                const id = document.getElementById('investor-id').value;
+                const name = document.getElementById('investor-name').value;
+                const cash = parseFloat(document.getElementById('investor-cash').value);
+
+                if (state.users.find(u => u.id === id)) {
+                    showToast(`Error: Investor ID ${id} already exists.`, "error");
+                    return;
+                }
+
+                const newUser = { id, name, cash, portfolio: {} };
+                state.users.push(newUser);
+                showToast(`Investor ${name} added!`, "success");
+                e.target.reset();
+                renderAll();
+            }
+
+            /**
+             * Handles the "Process Day" button click
+             */
+            function handleProcessDay() {
+                const day = state.market.currentDay;
+                
+                state.market.tickers.forEach(ticker => {
+                    const netVolume = ticker.dayBuys - ticker.daySells;
+                    const priceChange = netVolume * state.market.sensitivity;
+                    
+                    // Add a small random volatility factor (e.g., +/- 2.5%)
+                    const randomFactor = 1 + (Math.random() - 0.5) * 0.05; 
+                    
+                    let newPrice = (ticker.price + priceChange) * randomFactor;
+                    
+                    // Ensure price doesn't go below a minimum
+                    if (newPrice < 0.01) newPrice = 0.01; 
+                    
+                    ticker.price = newPrice;
+                    ticker.history.push({ day: day + 1, price: newPrice });
+                    
+                    // Reset for next day
+                    ticker.dayBuys = 0;
+                    ticker.daySells = 0;
+                });
+                
+                state.market.currentDay += 1;
+                showToast(`Day ${day} processed. Welcome to Day ${state.market.currentDay}.`, "success");
+                renderAll();
+            }
+
+            /**
+             * Handles clicks within the admin tables (delete buttons)
+             */
+            function handleAdminTableClicks(e) {
+                if (!e.target.classList.contains('btn-danger-outline')) return;
+
+                // Handle Ticker Deletion
+                const tickerSymbol = e.target.dataset.symbol;
+                if (tickerSymbol) {
+                    // Check if anyone owns this ticker
+                    const isOwned = state.users.some(user => user.portfolio[tickerSymbol]);
+                    if (isOwned) {
+                        showToast(`Error: Cannot delete ${tickerSymbol}. Investors still own shares.`, "error");
+                        return;
+                    }
+                    if (confirm(`Are you sure you want to delete ${tickerSymbol}? This is permanent.`)) {
+                        state.market.tickers = state.market.tickers.filter(t => t.symbol !== tickerSymbol);
+                        showToast(`Ticker ${tickerSymbol} deleted.`, "success");
+                        renderAll();
+                    }
+                }
+
+                // Handle Investor Deletion
+                const investorId = e.target.dataset.id;
+                if (investorId) {
+                    if (investorId === state.activeUserId) {
+                        showToast("Error: Cannot delete the currently active investor.", "error");
+                        return;
+                    }
+                    if (state.users.length <= 1) {
+                         showToast("Error: Cannot delete the last investor.", "error");
+                        return;
+                    }
+
+                    const user = state.users.find(u => u.id === investorId);
+                    if (Object.keys(user.portfolio).length > 0) {
+                        showToast(`Error: Cannot delete ${user.name}. They still have holdings.`, "error");
+                        return;
+                    }
+
+                    if (confirm(`Are you sure you want to delete ${user.name}? This is permanent.`)) {
+                        state.users = state.users.filter(u => u.id !== investorId);
+                        showToast(`Investor ${user.name} deleted.`, "success");
+                        renderAll();
+                    }
+                }
+            }
+
+            /**
+             * Handles resetting the entire game
+             */
+            function handleResetGame() {
+                if (confirm("ARE YOU SURE?\nThis will delete ALL investors, tickers, and progress permanently.")) {
+                    initializeDefaultState();
+                    showToast("Simulation has been reset.", "success");
+                    renderAll();
+                }
+            }
+
+            /**
+             * Handles investor search button click
+             */
+            function handleSearchInvestor() {
+                const query = searchInvestorInput.value;
+                renderManageInvestorsTable(query);
+            }
+            
+            // --- 6. Trade Modal Logic ---
+
+            /**
+             * Opens and populates the trade modal
+             */
+            function openTradeModal(symbol, tradeType) {
+                const ticker = getTicker(symbol);
+                const user = getActiveUser();
+                const userHolding = user.portfolio[symbol] || { shares: 0 };
+
+                // Store context on the modal
+                tradeModal.dataset.symbol = symbol;
+                tradeModal.dataset.tradeType = tradeType;
+
+                // Set titles and button styles
+                if (tradeType === 'buy') {
+                    modalTitle.textContent = `Buy ${symbol}`;
+                    confirmBtn.textContent = 'Confirm Buy';
+                    confirmBtn.className = 'btn btn-buy';
+                } else {
+                    modalTitle.textContent = `Sell ${symbol}`;
+                    confirmBtn.textContent = 'Confirm Sell';
+                    confirmBtn.className = 'btn btn-sell';
+                }
+
+                // Populate data
+                modalPriceEl.textContent = formatCurrency(ticker.price);
+                modalCashEl.textContent = formatCurrency(user.cash);
+                modalSharesEl.textContent = userHolding.shares;
+
+                // Reset form
+                tradeForm.reset();
+                updateModalTotal(); // Set total to $0.00
+                
+                tradeModal.style.display = 'block';
+                tradeQuantityInput.focus();
+            }
+            
+            /**
+             * Closes and resets the trade modal
+             */
+            function closeTradeModal() {
+                tradeModal.style.display = 'none';
+                tradeForm.reset();
+            }
+
+            /**
+             * Updates the "Total" in the modal as user types quantity
+             */
+            function updateModalTotal() {
+                const quantity = parseInt(tradeQuantityInput.value) || 0;
+                const price = parseFloat(modalPriceEl.textContent.replace('$', ''));
+                const total = quantity * price;
+                modalTotalEl.textContent = formatCurrency(total);
+            }
+
+            /**
+             * Handles the final confirmation of a trade
+             */
+            function handleTradeConfirm(e) {
+                e.preventDefault();
+                
+                const symbol = tradeModal.dataset.symbol;
+                const tradeType = tradeModal.dataset.tradeType;
+                const quantity = parseInt(tradeQuantityInput.value);
+                
+                const ticker = getTicker(symbol);
+                const user = getActiveUser();
+                const totalCost = quantity * ticker.price;
+                
+                // --- Validation ---
+                if (!quantity || quantity <= 0) {
+                    showToast("Error: Please enter a valid quantity.", "error");
+                    return;
+                }
+
+                if (tradeType === 'buy') {
+                    if (user.cash < totalCost) {
+                        showToast("Error: Not enough cash for this purchase.", "error");
+                        return;
+                    }
+                    
+                    // --- Execute Buy ---
+                    user.cash -= totalCost;
+                    ticker.dayBuys += quantity;
+                    
+                    const holding = user.portfolio[symbol];
+                    if (holding) {
+                        // Weighted average for new buy price
+                        const newTotalShares = holding.shares + quantity;
+                        const newAvgBuyPrice = ((holding.avgBuyPrice * holding.shares) + totalCost) / newTotalShares;
+                        holding.shares = newTotalShares;
+                        holding.avgBuyPrice = newAvgBuyPrice;
+                    } else {
+                        // New holding
+                        user.portfolio[symbol] = {
+                            shares: quantity,
+                            avgBuyPrice: ticker.price
+                        };
+                    }
+                    showToast(`Successfully bought ${quantity} ${symbol}`, "success");
+
+                } else { // 'sell'
+                    const holding = user.portfolio[symbol];
+                    if (!holding || holding.shares < quantity) {
+                        showToast("Error: You don't own enough shares to sell.", "error");
+                        return;
+                    }
+                    
+                    // --- Execute Sell ---
+                    user.cash += totalCost;
+                    ticker.daySells += quantity;
+                    holding.shares -= quantity;
+                    
+                    if (holding.shares === 0) {
+                        delete user.portfolio[symbol];
+                    }
+                    showToast(`Successfully sold ${quantity} ${symbol}`, "success");
+                }
+                
+                closeTradeModal();
+                renderAll(); // Full re-render to update everything
+            }
+
+            // --- 7. Toast Notification ---
+
+            /**
+             * Displays a toast notification
+             */
+            function showToast(message, type = 'info') {
+                const toast = document.createElement('div');
+                toast.className = `toast ${type}`;
+                toast.textContent = message;
+                
+                toastContainer.appendChild(toast);
+                
+                // Remove the toast after the animation
+                setTimeout(() => {
+                    toast.remove();
+                }, 3000); // Matches animation delay + duration
+            }
+
+            // --- 8. Event Listeners ---
+            
+            // Page Navigation
+            document.querySelector('nav').addEventListener('click', handlePageNavigation);
+
+            // Header Controls
+            userSelect.addEventListener('change', handleChangeUser);
+            processDayBtn.addEventListener('click', handleProcessDay);
+
+            // Admin Forms
+            addTickerForm.addEventListener('submit', handleAddTicker);
+            addInvestorForm.addEventListener('submit', handleAddInvestor);
+            marketSensitivityInput.addEventListener('change', (e) => {
+                state.market.sensitivity = parseFloat(e.target.value) || DEFAULT_SENSITIVITY;
+                showToast(`Sensitivity set to ${state.market.sensitivity}`, "info");
+                saveData();
+            });
+            resetGameBtn.addEventListener('click', handleResetGame);
+            
+            // Admin Search
+            searchInvestorBtn.addEventListener('click', handleSearchInvestor);
+            searchInvestorInput.addEventListener('keyup', (e) => {
+                if (e.key === 'Enter') handleSearchInvestor();
+            });
+
+            // Admin Tables (Event Delegation)
+            manageTickersTable.addEventListener('click', handleAdminTableClicks);
+            manageInvestorsTable.addEventListener('click', handleAdminTableClicks);
+
+            // Market Table (Event Delegation)
+            marketTableBody.addEventListener('click', (e) => {
+                const buyBtn = e.target.closest('.btn-buy');
+                if (buyBtn) {
+                    openTradeModal(buyBtn.dataset.symbol, 'buy');
+                    return;
+                }
+                
+                const sellBtn = e.target.closest('.btn-sell');
+                if (sellBtn) {
+                    openTradeModal(sellBtn.dataset.symbol, 'sell');
+                    return;
+                }
+            });
+
+            // Modal Listeners
+            tradeForm.addEventListener('submit', handleTradeConfirm);
+            tradeQuantityInput.addEventListener('input', updateModalTotal);
+            closeBtn.addEventListener('click', closeTradeModal);
+            cancelBtn.addEventListener('click', closeTradeModal);
+            window.addEventListener('click', (e) => {
+                if (e.target === tradeModal) {
+                    closeTradeModal();
+                }
+            });
+
+            // --- 9. Initialization ---
+            
+            // We still load and render everything, it's just hidden.
+            // This ensures the app is ready instantly upon login.
+            loadData();
+            renderAll();
+
+        });
+    </script>
+</body>
+</html>
